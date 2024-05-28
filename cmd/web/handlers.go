@@ -3,11 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/emiliogain/snippetbox/pkg/forms"
 	"github.com/emiliogain/snippetbox/pkg/models"
 	"net/http"
 	"strconv"
-	"strings"
-	"unicode/utf8"
 )
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +46,7 @@ func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 
 }
 func (app *application) createSnippetForm(w http.ResponseWriter, r *http.Request) {
-	app.render(w, r, "create.page.tmpl", nil)
+	app.render(w, r, "create.page.tmpl", &templateData{Form: forms.New(nil)})
 }
 
 func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
@@ -57,41 +56,24 @@ func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
-	title := r.PostForm.Get("title")
-	content := r.PostForm.Get("content")
-	expires := r.PostForm.Get("expires")
 
-	errorsMap := make(map[string]string)
+	form := forms.New(r.PostForm)
+	form.Required("title", "content", "expires")
+	form.PermittedValues("expires", "365", "7", "1")
+	form.MaxLength("title", 100)
 
-	if strings.TrimSpace(title) == "" {
-		errorsMap["title"] = "This field cannot be blank"
-	} else if utf8.RuneCountInString(title) > 100 {
-		errorsMap["title"] = "This field is too long (Maximum is 100 characters)"
-	}
-
-	if strings.TrimSpace(content) == "" {
-		errorsMap["content"] = "This field cannot be blank"
-	}
-
-	if strings.TrimSpace(expires) == "" {
-		errorsMap["expires"] = "This field cannot be blank"
-	} else if expires != "365" && expires != "7" && expires != "1" {
-		errorsMap["expires"] = "This field is invalid"
-	}
-
-	if len(errorsMap) > 0 {
-		app.render(w, r, "create.page.tmpl", &templateData{
-			FormData:   r.PostForm,
-			FormErrors: errorsMap,
-		})
+	if !form.Valid() {
+		app.render(w, r, "create.page.tmpl", &templateData{Form: form})
 		return
 	}
 
-	id, err := app.snippets.Insert(title, content, expires)
+	id, err := app.snippets.Insert(form.Get("title"), form.Get("content"), form.Get("expires"))
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
+
+	app.session.Put(r, "flash", "Snippet successfully created!")
 
 	http.Redirect(w, r, fmt.Sprintf("/snippet/%d", id), http.StatusSeeOther)
 
