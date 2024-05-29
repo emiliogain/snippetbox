@@ -12,6 +12,50 @@ SnippetBox is a web application written in Go that allows users to paste and sha
 - **Sessions**: Stateful HTTP sessions for maintaining user state across requests.
 - **Secure User Authentication**: User authentication with password hashing and secure session management.
 
+## Getting Started
+
+### Prerequisites
+
+- Go 1.16+
+- MySQL 5.7+
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/emiliogain/snippetbox.git
+   cd snippetbox
+
+2. Set up the MySQL database:
+   ```mysql
+    CREATE DATABASE snippetbox;
+    USE snippetbox;
+   
+    CREATE TABLE users (
+    id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    hashed_password CHAR(60) NOT NULL,
+    created DATETIME NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE
+    );
+    ALTER TABLE users ADD CONSTRAINT users_uc_email UNIQUE (email);
+   
+    CREATE TABLE snippets (
+    id INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(100) NOT NULL,
+    content TEXT NOT NULL,
+    created DATETIME NOT NULL,
+    expires DATETIME NOT NULL
+    );
+    CREATE INDEX idx_snippets_created ON snippets(created);
+
+3. Run the application:
+   ```bash
+   go run ./cmd/web
+
+4. Visit http://localhost:4000 in your web browser to use the application.
+
 ## Usage
 
 - **Create a Snippet**:
